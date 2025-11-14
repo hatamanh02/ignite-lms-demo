@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ignite LMS – Assignments</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>[x-cloak]{display:none !important}</style>
+</head>
+<body class="bg-sand-50" x-data="app()">
+
+  <div class="min-h-screen flex bg-slate-50">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-sand-200 hidden md:flex flex-col">
+      <div class="px-4 py-4 border-b border-sand-200">
+        <h1 class="text-xl font-bold text-slate-900">Ignite LMS</h1>
+        <p class="text-xs text-slate-500">Student View</p>
+      </div>
+      <nav class="flex-1 px-3 py-4 space-y-1 text-sm">
+        <button
+          @click="page='dashboard'"
+          class="w-full text-left px-3 py-2 rounded-lg"
+          :class="page==='dashboard' ? 'bg-amber-600 text-white' : 'text-slate-700 hover:bg-sand-100'">
+          Dashboard
+        </button>
+        <button
+          @click="page='assignments'"
+          class="w-full text-left px-3 py-2 rounded-lg"
+          :class="page==='assignments' ? 'bg-amber-600 text-white' : 'text-slate-700 hover:bg-sand-100'">
+          Assignments
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1">
+
+      <!-- Top bar (mobile) -->
+      <header class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-sand-200">
+        <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-md border border-sand-200">
+          ☰
+        </button>
+        <span class="font-semibold text-slate-900">Ignite LMS</span>
+      </header>
+
+      <!-- Simple dashboard placeholder -->
+      <section x-show="page==='dashboard'" class="p-6">
+        <h2 class="text-2xl font-bold text-slate-900 mb-2">Dashboard</h2>
+        <p class="text-sm text-slate-600">This is just a placeholder. Your real dashboard can go here.</p>
+      </section>
+
+      <!-- ================= ASSIGNMENTS TAB ================= -->
+      <section x-show="page==='assignments'" x-cloak class="p-4 md:p-6 lg:p-8">
+
+        <!-- Header + Search & Filters -->
+        <div class="flex flex-col gap-4 mb-6">
+          <div>
+            <h1 class="text-3xl font-bold text-slate-900">Assignments</h1>
+            <p class="text-sm text-slate-600 mt-1">Track your ongoing, upcoming, and completed work.</p>
+          </div>
+
+          <div class="flex flex-wrap gap-3 items-center">
+            <!-- Search -->
+            <div class="relative flex-1 min-w-[220px] md:min-w-[260px]">
+              <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+                </svg>
+              </span>
+              <input
+                x-model="assignmentSearch"
+                type="text"
+                class="w-full rounded-xl border border-sand-300 bg-white pl-9 pr-3 py-2.5 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                placeholder="Search assignments..."
+              >
+            </div>
+
+            <!-- Course Filter -->
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1">Course</label>
+              <select
+                x-model="assignmentCourseFilter"
+                class="rounded-xl border border-sand-300 bg-white px-3 py-2 text-sm
+                       focus:ring-2 focus:ring-amber-300 focus:border-amber-400 min-w-[140px]"
+              >
+                <option value="all">All Courses</option>
+                <template x-for="c in assignmentCourses" :key="c">
+                  <option :value="c" x-text="c"></option>
+                </template>
+              </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1">Status</label>
+              <select
+                x-model="assignmentStatusFilter"
+                class="rounded-xl border border-sand-300 bg-white px-3 py-2 text-sm
+                       focus:ring-2 focus:ring-amber-300 focus:border-amber-400 min-w-[140px]"
+              >
+                <option value="all">All Statuses</option>
+                <option>Not Started</option>
+                <option>In Progress</option>
+                <option>Submitted</option>
+                <option>Graded</option>
+              </select>
+            </div>
+
+            <!-- New Submission -->
+            <button
+              @click="openNewSubmission()"
+              class="inline-flex items-center gap-2 rounded-xl bg-amber-600 text-white text-sm px-4 py-2.5 
+                     hover:bg-amber-700 shadow-md hover:shadow-lg transition"
+            >
+              <svg class="h-4 w-4" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+              </svg>
+              New Submission
+            </button>
+          </div>
+        </div>
+
+        <!-- Horizontal Tabs -->
+        <div class="flex gap-3 mb-6 border-b border-sand-300 pb-2">
+          <template x-for="tab in [
+            {id:'ongoing', name:'Ongoing'},
+            {id:'upcoming', name:'Upcoming'},
+            {id:'completed', name:'Completed'}
+          ]" :key="tab.id">
+            <button
+              @click="activeAssignmentTab = tab.id"
+              class="px-4 py-2 rounded-lg text-sm font-medium"
+              :class="activeAssignmentTab === tab.id
+                ? 'bg-amber-600 text-white shadow'
+                : 'bg-sand-100 text-slate-700 hover:bg-sand-200'"
+            >
+              <span x-text="tab.name"></span>
+              (<span x-text="assignmentsByTab(tab.id).length"></span>)
+            </button>
+          </template>
+        </div>
+
+        <!-- Assignment List -->
+        <div class="flex-1 space-y-4">
+
+          <template x-if="assignmentsByTab(activeAssignmentTab).length === 0">
+            <div class="rounded-2xl border border-dashed border-sand-300 bg-white px-6 py-10 
+                        text-center text-sm text-slate-500">
+              No assignments found. Adjust your search or filters.
+            </div>
+          </template>
+
+          <template x-for="a in assignmentsByTab(activeAssignmentTab)" :key="a.id">
+            <div
+              class="rounded-2xl border border-sand-200/80 bg-white shadow-card px-5 py-4
+                     flex flex-col gap-4 md:flex-row md:items-center"
+            >
+              <!-- Left: info (click to open detail) -->
+              <div class="flex-1 min-w-0 cursor-pointer" @click="openAssignmentDetail(a)">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h2 class="font-semibold text-slate-900 truncate" x-text="a.title"></h2>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-sand-100 text-sand-800" x-text="a.course"></span>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-600">
+                  <span>
+                    Due:
+                    <span class="font-medium" x-text="formatDateTime(a.dueDate)"></span>
+                  </span>
+
+                  <span class="inline-flex items-center gap-1">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                    <span x-text="a.status"></span>
+                  </span>
+
+                  <span class="inline-flex items-center gap-1">
+                    <span class="text-slate-400">•</span>
+                    <span
+                      class="text-xs font-medium px-2 py-0.5 rounded-full border"
+                      :class="priorityClasses(priorityLabel(a))"
+                      x-text="priorityLabel(a)"
+                    ></span>
+                  </span>
+                </div>
+
+                <!-- Progress -->
+                <div class="mt-3">
+                  <div class="flex justify-between text-xs text-slate-600 mb-1">
+                    <span>Progress</span>
+                    <span x-text="a.progress + '%'"></span>
+                  </div>
+                  <div class="h-2.5 w-full rounded-full bg-sand-100 overflow-hidden">
+                    <div
+                      class="h-full rounded-full bg-amber-600"
+                      :style="`width: ${a.progress}%;`"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: grade + buttons -->
+              <div class="flex flex-col gap-2 w-full md:w-64 md:items-end">
+
+                <!-- Big Grade badge -->
+                <div
+                  x-show="a.status === 'Graded' && a.pointsPossible && a.pointsEarned !== null"
+                  class="text-sm font-semibold text-emerald-700 mb-1 md:text-right"
+                >
+                  <span class="mr-1 align-middle">Grade:</span>
+                  <span
+                    class="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-emerald-50 
+                           border border-emerald-300 text-2xl font-bold leading-none"
+                    x-text="gradePercent(a) + '%'"
+                  ></span>
+                </div>
+
+                <div class="flex flex-col gap-2 w-full md:w-56">
+                  <!-- Submit: only when in ongoing tab -->
+                  <button
+                    x-show="activeAssignmentTab === 'ongoing'"
+                    @click.stop="openSubmissionModal(a)"
+                    class="w-full px-4 py-2.5 rounded-xl text-sm font-semibold uppercase tracking-wide
+                           shadow-md bg-amber-600 text-white hover:bg-amber-700 hover:shadow-lg transition"
+                  >
+                    Submit
+                  </button>
+
+                  <!-- View Feedback & Submission -->
+                  <button
+                    @click.stop="openFeedbackModal(a)"
+                    :disabled="!a.pointsEarned && !a.feedback && !a.submission"
+                    class="w-full px-4 py-2 rounded-xl text-sm font-medium border transition"
+                    :class="(!a.feedback && !a.pointsEarned && !a.submission)
+                      ? 'border-sand-200 text-slate-400 bg-sand-50 cursor-not-allowed'
+                      : 'border-sand-300 text-slate-700 bg-white hover:bg-sand-50'"
+                  >
+                    View Feedback & Submission
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- ========== SUBMISSION MODAL ========== -->
+        <div
+          x-show="submissionModalOpen"
+          x-cloak
+          class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4 py-8"
+        >
+          <div
+            @click.away="closeSubmissionModal()"
+            class="max-w-2xl w-full rounded-2xl bg-white shadow-2xl p-6 border border-sand-200 space-y-4"
+          >
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="text-xs font-semibold text-amber-600 uppercase mb-1">Submit Assignment</div>
+                <h2 class="text-lg font-semibold text-slate-900" x-text="submissionTitle || 'New Submission'"></h2>
+              </div>
+              <button @click="closeSubmissionModal()" class="p-1.5 rounded-full hover:bg-sand-100">✕</button>
+            </div>
+
+            <!-- Form -->
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <label class="block text-xs mb-1">Course</label>
+                <select
+                  x-model="submissionCourse"
+                  class="w-full rounded-lg border border-sand-300 px-3 py-2"
+                >
+                  <template x-for="c in assignmentCourses" :key="c">
+                    <option :value="c" x-text="c"></option>
+                  </template>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs mb-1">Assignment Title</label>
+                <input
+                  x-model="submissionTitle"
+                  type="text"
+                  class="w-full rounded-lg border border-sand-300 px-3 py-2"
+                >
+              </div>
+            </div>
+
+            <!-- Type Tabs -->
+            <div>
+              <div class="text-xs font-medium text-slate-600 mb-1">Submission Type</div>
+              <div class="flex gap-2">
+                <button
+                  @click="submissionType='file'"
+                  :class="submissionType==='file' ? 'bg-amber-600 text-white' : 'bg-sand-100'"
+                  class="px-3 py-1.5 text-xs rounded-full border"
+                >
+                  File Upload
+                </button>
+                <button
+                  @click="submissionType='text'"
+                  :class="submissionType==='text' ? 'bg-amber-600 text-white' : 'bg-sand-100'"
+                  class="px-3 py-1.5 text-xs rounded-full border"
+                >
+                  Text
+                </button>
+                <button
+                  @click="submissionType='link'"
+                  :class="submissionType==='link' ? 'bg-amber-600 text-white' : 'bg-sand-100'"
+                  class="px-3 py-1.5 text-xs rounded-full border"
+                >
+                  Link
+                </button>
+              </div>
+            </div>
+
+            <!-- Type Fields -->
+            <div class="space-y-3">
+              <!-- File -->
+              <div x-show="submissionType==='file'">
+                <div
+                  class="border-2 border-dashed rounded-xl p-6 bg-sand-50 text-center cursor-pointer"
+                  @dragover.prevent
+                  @drop.prevent="handleFileDrop"
+                  @click="$refs.fileInput.click()"
+                >
+                  <input
+                    type="file"
+                    x-ref="fileInput"
+                    class="hidden"
+                    accept=".pdf,.doc,.docx,.zip"
+                    @change="handleFileInput"
+                  >
+                  <div
+                    x-text="submissionFile ? submissionFile.name : 'Click or drag to upload (PDF, DOCX, ZIP)'"
+                    class="text-sm"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Text -->
+              <div x-show="submissionType==='text'">
+                <textarea
+                  x-model="submissionText"
+                  rows="6"
+                  class="w-full rounded-xl border border-sand-300 px-3 py-2"
+                  placeholder="Write your answer here..."
+                ></textarea>
+              </div>
+
+              <!-- Link -->
+              <div x-show="submissionType==='link'">
+                <input
+                  x-model="submissionLink"
+                  type="url"
+                  class="w-full rounded-xl border border-sand-300 px-3 py-2"
+                  placeholder="https://..."
+                >
+              </div>
+            </div>
+
+            <!-- Notes -->
+            <textarea
+              x-model="submissionNotes"
+              rows="3"
+              class="w-full rounded-xl border border-sand-300 px-3 py-2 text-sm"
+              placeholder="Additional notes (optional)..."
+            ></textarea>
+
+            <!-- Error -->
+            <template x-if="submissionError">
+              <div class="text-rose-600 text-xs" x-text="submissionError"></div>
+            </template>
+
+            <!-- Buttons -->
+            <div class="flex justify-end gap-3">
+              <button @click="closeSubmissionModal()" class="px-4 py-2 rounded-xl bg-sand-100">
+                Cancel
+              </button>
+              <button
+                @click="submitAssignment()"
+                class="px-4 py-2 rounded-xl bg-amber-600 text-white"
+                :disabled="submissionBusy"
+              >
+                <span x-show="!submissionBusy">Submit</span>
+                <span x-show="submissionBusy">Submitting...</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== FEEDBACK + SUBMISSION MODAL ========== -->
+        <div
+          x-show="feedbackModalOpen"
+          x-cloak
+          class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4 py-8"
+        >
+          <div
+            @click.away="closeFeedbackModal()"
+            class="max-w-lg w-full rounded-2xl bg-white shadow-2xl p-6 border border-sand-200 space-y-4"
+          >
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="text-xs font-semibold text-amber-600 uppercase mb-1">Feedback & Submission</div>
+                <h2 class="text-lg font-semibold text-slate-900"
+                    x-text="feedbackAssignment?.title || 'Assignment'"></h2>
+              </div>
+              <button @click="closeFeedbackModal()" class="p-1.5 rounded-full hover:bg-sand-100">✕</button>
+            </div>
+
+            <!-- Course + Grade -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div class="rounded-xl bg-sand-50 border border-sand-200 p-3">
+                <div class="text-xs text-slate-500">Course</div>
+                <div class="font-medium" x-text="feedbackAssignment?.course || '—'"></div>
+              </div>
+              <div class="rounded-xl bg-sand-50 border border-sand-200 p-3">
+                <div class="text-xs text-slate-500">Grade</div>
+                <div
+                  class="font-medium"
+                  x-show="feedbackAssignment && feedbackAssignment.pointsPossible && feedbackAssignment.pointsEarned !== null"
+                >
+                  <span x-text="feedbackAssignment.pointsEarned + ' / ' + feedbackAssignment.pointsPossible"></span>
+                  <span class="ml-2 text-emerald-700 font-semibold"
+                        x-text="'(' + gradePercent(feedbackAssignment) + '%)'"></span>
+                </div>
+                <div
+                  class="font-medium text-slate-400"
+                  x-show="!feedbackAssignment || feedbackAssignment.pointsEarned === null"
+                >
+                  Not graded yet.
+                </div>
+              </div>
+            </div>
+
+            <!-- Instructor Feedback -->
+            <div class="rounded-xl bg-sand-50 border border-sand-200 p-3">
+              <div class="text-xs text-slate-500 mb-1">Instructor Feedback</div>
+              <p class="text-sm text-slate-800"
+                 x-text="feedbackAssignment?.feedback || 'No feedback available yet.'"></p>
+            </div>
+
+            <!-- Your Submission -->
+            <div class="rounded-xl bg-sand-50 border border-sand-200 p-3 space-y-1">
+              <div class="text-xs text-slate-500 mb-1">Your Submission</div>
+
+              <template x-if="feedbackAssignment?.submission">
+                <div class="space-y-2 text-sm text-slate-800">
+                  <div>
+                    <span class="font-semibold">Type: </span>
+                    <span x-text="feedbackAssignment.submission.type.toUpperCase()"></span>
+                  </div>
+
+                  <div x-show="feedbackAssignment.submission.type === 'file' && feedbackAssignment.submission.fileName">
+                    <span class="font-semibold">File: </span>
+                    <span x-text="feedbackAssignment.submission.fileName"></span>
+                  </div>
+
+                  <div x-show="feedbackAssignment.submission.type === 'link' && feedbackAssignment.submission.link">
+                    <span class="font-semibold">Link: </span>
+                    <a
+                      :href="feedbackAssignment.submission.link"
+                      target="_blank"
+                      class="text-amber-700 underline break-all"
+                      x-text="feedbackAssignment.submission.link"
+                    ></a>
+                  </div>
+
+                  <div x-show="feedbackAssignment.submission.type === 'text' && feedbackAssignment.submission.text">
+                    <span class="font-semibold block mb-1">Text Response:</span>
+                    <pre
+                      class="text-xs bg-white border border-sand-200 rounded-lg p-2 max-h-40 overflow-auto whitespace-pre-wrap"
+                      x-text="feedbackAssignment.submission.text"
+                    ></pre>
+                  </div>
+
+                  <div x-show="feedbackAssignment.submission.notes">
+                    <span class="font-semibold block mb-1">Notes to Instructor:</span>
+                    <p class="text-xs" x-text="feedbackAssignment.submission.notes"></p>
+                  </div>
+                </div>
+              </template>
+
+              <div
+                x-show="!feedbackAssignment || !feedbackAssignment.submission"
+                class="text-xs text-slate-400"
+              >
+                You have not submitted anything for this assignment in this demo.
+              </div>
+            </div>
+
+            <div class="flex justify-end">
+              <button
+                @click="closeFeedbackModal()"
+                class="px-4 py-2 rounded-xl bg-amber-600 text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== ASSIGNMENT DETAIL MODAL ========== -->
+        <div
+          x-show="detailModalOpen"
+          x-cloak
+          class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4 py-8"
+        >
+          <div
+            @click.away="closeAssignmentDetail()"
+            class="max-w-2xl w-full rounded-2xl bg-white shadow-2xl p-6 border border-sand-200 space-y-4"
+          >
+            <div class="flex justify-between items-start gap-3">
+              <div>
+                <div class="text-xs font-semibold text-amber-600 uppercase mb-1">Assignment Details</div>
+                <h2 class="text-xl font-semibold text-slate-900" x-text="detailAssignment?.title || 'Assignment'"></h2>
+                <p class="text-xs text-slate-500 mt-1" x-text="detailAssignment?.course || ''"></p>
+              </div>
+              <button @click="closeAssignmentDetail()" class="p-1.5 rounded-full hover:bg-sand-100">✕</button>
+            </div>
+
+            <!-- Meta -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600">
+              <div>
+                <div class="font-semibold text-slate-700">Due</div>
+                <div x-text="detailAssignment ? formatDateTime(detailAssignment.dueDate) : '—'"></div>
+              </div>
+              <div>
+                <div class="font-semibold text-slate-700">Status</div>
+                <div x-text="detailAssignment?.status || '—'"></div>
+              </div>
+              <div>
+                <div class="font-semibold text-slate-700">Weight / Points</div>
+                <div>
+                  <span x-text="detailAssignment?.weight || ''"></span>
+                  <span x-show="detailAssignment?.pointsPossible"> • </span>
+                  <span x-show="detailAssignment?.pointsPossible"
+                        x-text="detailAssignment.pointsPossible + ' pts'"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Overview -->
+            <div class="rounded-xl bg-sand-50 border border-sand-200 p-3 text-sm text-slate-800">
+              <div class="text-xs font-semibold text-slate-500 mb-1">Overview</div>
+              <p x-text="detailAssignment?.description || 'No description provided.'"></p>
+            </div>
+
+            <!-- Requirements -->
+            <div class="rounded-xl bg-sand-50 border border-sand-200 p-3 text-sm text-slate-800">
+              <div class="text-xs font-semibold text-slate-500 mb-1">Requirements</div>
+              <ul class="list-disc list-inside space-y-1">
+                <template x-for="(req,idx) in (detailAssignment?.requirements || [])" :key="idx">
+                  <li x-text="req"></li>
+                </template>
+                <li
+                  x-show="!detailAssignment || !detailAssignment.requirements || detailAssignment.requirements.length === 0"
+                  class="text-xs text-slate-400"
+                >
+                  No specific requirements listed.
+                </li>
+              </ul>
+            </div>
+
+            <!-- Your Submission -->
+            <div class="rounded-xl bg-sand-50 border border-sand-200 p-3 text-sm text-slate-800">
+              <div class="text-xs font-semibold text-slate-500 mb-1">Your Submission</div>
+
+              <template x-if="detailAssignment?.submission">
+                <div class="space-y-2 text-sm">
+                  <div>
+                    <span class="font-semibold">Type: </span>
+                    <span x-text="detailAssignment.submission.type.toUpperCase()"></span>
+                  </div>
+
+                  <div x-show="detailAssignment.submission.type === 'file' && detailAssignment.submission.fileName">
+                    <span class="font-semibold">File: </span>
+                    <span x-text="detailAssignment.submission.fileName"></span>
+                  </div>
+
+                  <div x-show="detailAssignment.submission.type === 'link' && detailAssignment.submission.link">
+                    <span class="font-semibold">Link: </span>
+                    <a
+                      :href="detailAssignment.submission.link"
+                      target="_blank"
+                      class="text-amber-700 underline break-all"
+                      x-text="detailAssignment.submission.link"
+                    ></a>
+                  </div>
+
+                  <div x-show="detailAssignment.submission.type === 'text' && detailAssignment.submission.text">
+                    <span class="font-semibold block mb-1">Text Response:</span>
+                    <pre
+                      class="text-xs bg-white border border-sand-200 rounded-lg p-2 max-h-40 overflow-auto whitespace-pre-wrap"
+                      x-text="detailAssignment.submission.text"
+                    ></pre>
+                  </div>
+
+                  <div x-show="detailAssignment.submission.notes">
+                    <span class="font-semibold block mb-1">Notes:</span>
+                    <p class="text-xs" x-text="detailAssignment.submission.notes"></p>
+                  </div>
+                </div>
+              </template>
+
+              <div
+                x-show="!detailAssignment || !detailAssignment.submission"
+                class="text-xs text-slate-400"
+              >
+                No submission on record for this assignment in this demo.
+              </div>
+            </div>
+
+            <div class="flex justify-end gap-3">
+              <button
+                x-show="detailAssignment && (detailAssignment.status === 'Not Started' || detailAssignment.status === 'In Progress')"
+                @click="openSubmissionModal(detailAssignment)"
+                class="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-700"
+              >
+                Submit This Assignment
+              </button>
+              <button
+                @click="closeAssignmentDetail()"
+                class="px-4 py-2 rounded-xl bg-sand-100 text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+      <!-- ================= END ASSIGNMENTS TAB ================= -->
+
+    </main>
+  </div>
+
+  <script>
+    function app() {
+      return {
+        sidebarOpen: false,
+        page: 'assignments',
+
+        /* ================= ASSIGNMENTS STATE & METHODS ================= */
+        assignments: [
+          // Ongoing
+          {
+            id: 1,
+            title: 'WebDev Project Milestone 1',
+            course: 'CS 301',
+            dueDate: '2025-11-10T23:59',
+            status: 'In Progress',
+            progress: 40,
+            canSubmit: true,
+            pointsPossible: 100,
+            pointsEarned: null,
+            feedback: null,
+            weight: '20% of final grade',
+            description: 'Implement the first milestone of your full-stack web application, including core layout and navigation.',
+            requirements: [
+              'Set up project using React and a modern build tool.',
+              'Create at least three reusable components.',
+              'Implement basic routing between at least two pages.',
+              'Push your code to a public Git repository.'
+            ],
+            submission: null
+          },
+          {
+            id: 2,
+            title: 'Supply Chain Simulation Report',
+            course: 'BUS 150',
+            dueDate: '2025-11-18T23:59',
+            status: 'Not Started',
+            progress: 0,
+            canSubmit: true,
+            pointsPossible: 50,
+            pointsEarned: null,
+            feedback: null,
+            weight: '15% of final grade',
+            description: 'Write an analytical report summarizing your decisions and outcomes in the supply chain simulation.',
+            requirements: [
+              'Summarize key decisions made in each simulation round.',
+              'Discuss trade-offs between cost, service level, and capacity.',
+              'Include data tables or charts from the simulation dashboard.',
+              'Conclude with recommendations for improving performance.'
+            ],
+            submission: null
+          },
+          {
+            id: 3,
+            title: 'Final Project Proposal',
+            course: 'CS 401',
+            dueDate: '2025-11-25T23:59',
+            status: 'In Progress',
+            progress: 60,
+            canSubmit: true,
+            pointsPossible: 80,
+            pointsEarned: null,
+            feedback: null,
+            weight: '25% of final grade',
+            description: 'Submit a detailed proposal for your final project, including problem statement, tech stack, and milestones.',
+            requirements: [
+              'Describe the problem your project will solve.',
+              'Specify the main technologies and tools you will use.',
+              'Provide a timeline with at least three milestones.',
+              'Explain how you will test and validate your solution.'
+            ],
+            submission: null
+          },
+
+          // Upcoming
+          {
+            id: 4,
+            title: 'Research Essay Draft',
+            course: 'ENG 202',
+            dueDate: '2025-12-01T23:59',
+            status: 'Not Started',
+            progress: 0,
+            canSubmit: true,
+            pointsPossible: 40,
+            pointsEarned: null,
+            feedback: null,
+            weight: '10% of final grade',
+            description: 'Draft an argumentative research essay on a contemporary social issue using at least five academic sources.',
+            requirements: [
+              'Clear thesis statement in the introduction.',
+              'Use at least five peer-reviewed sources.',
+              'Include proper in-text citations and reference list.',
+              'Draft should be 1500–2000 words.'
+            ],
+            submission: null
+          },
+          {
+            id: 5,
+            title: 'Final Exam Review Pack',
+            course: 'MATH 201',
+            dueDate: '2025-12-10T17:00',
+            status: 'Not Started',
+            progress: 0,
+            canSubmit: true,
+            pointsPossible: 20,
+            pointsEarned: null,
+            feedback: null,
+            weight: '5% bonus',
+            description: 'Complete a set of review problems covering limits, derivatives, and applications.',
+            requirements: [
+              'Show full steps for each problem.',
+              'Cover at least one question from each major topic.',
+              'Highlight any theorems or rules used.',
+              'Submit as a single PDF document.'
+            ],
+            submission: null
+          },
+
+          // Completed
+          {
+            id: 7,
+            title: 'Data Structures Quiz 3',
+            course: 'CS 301',
+            dueDate: '2025-10-10T23:59',
+            status: 'Graded',
+            progress: 100,
+            canSubmit: false,
+            pointsPossible: 20,
+            pointsEarned: 18,
+            feedback: 'Good work overall. Review tree traversals for minor mistakes.',
+            weight: '5% of final grade',
+            description: 'Timed quiz on trees, graphs, and their basic traversals.',
+            requirements: [
+              'Answer all multiple-choice and short-answer questions.',
+              'You may not use external notes or resources during the quiz.'
+            ],
+            submission: {
+              type: 'text',
+              text: 'Quiz completed online in the LMS.',
+              fileName: null,
+              link: null,
+              notes: 'Submitted during scheduled quiz window.',
+              submittedAt: '2025-10-10T21:05:00'
+            }
+          },
+          {
+            id: 8,
+            title: 'Market Entry Case Study',
+            course: 'BUS 150',
+            dueDate: '2025-10-05T23:59',
+            status: 'Graded',
+            progress: 100,
+            canSubmit: false,
+            pointsPossible: 100,
+            pointsEarned: 92,
+            feedback: 'Strong analysis and structure. Consider adding more data to support your final recommendation.',
+            weight: '20% of final grade',
+            description: 'Analyze a firm’s strategy for entering a new international market and provide a recommendation.',
+            requirements: [
+              'Summarize the case context and main problem.',
+              'Evaluate at least two entry mode options.',
+              'Support your recommendation with data and course concepts.',
+              'Follow the required case report structure.'
+            ],
+            submission: {
+              type: 'file',
+              fileName: 'bus150_market_entry_case_study.pdf',
+              text: null,
+              link: null,
+              notes: 'Please focus feedback on the risk analysis section.',
+              submittedAt: '2025-10-05T20:12:00'
+            }
+          }
+        ],
+
+        activeAssignmentTab: 'ongoing',
+        assignmentSearch: '',
+        assignmentCourseFilter: 'all',
+        assignmentStatusFilter: 'all',
+
+        submissionModalOpen: false,
+        submissionAssignment: null,
+        submissionCourse: '',
+        submissionTitle: '',
+        submissionType: 'file',
+        submissionFile: null,
+        submissionText: '',
+        submissionLink: '',
+        submissionNotes: '',
+        submissionError: null,
+        submissionBusy: false,
+
+        feedbackModalOpen: false,
+        feedbackAssignment: null,
+
+        detailModalOpen: false,
+        detailAssignment: null,
+
+        // Derived
+        get assignmentCourses() {
+          return [...new Set(this.assignments.map(a => a.course))];
+        },
+
+        // Filters & tabs
+        assignmentMatchesFilters(a) {
+          const q = this.assignmentSearch.trim().toLowerCase();
+          if (q && !(a.title.toLowerCase().includes(q) || a.course.toLowerCase().includes(q))) {
+            return false;
+          }
+          if (this.assignmentCourseFilter !== 'all' && a.course !== this.assignmentCourseFilter) {
+            return false;
+          }
+          if (this.assignmentStatusFilter !== 'all' && a.status !== this.assignmentStatusFilter) {
+            return false;
+          }
+          return true;
+        },
+
+        assignmentsByTab(tab) {
+          const now = new Date();
+          return this.assignments
+            .filter(a => {
+              const due = new Date(a.dueDate);
+              if (tab === 'ongoing') {
+                return a.status === 'Not Started' || a.status === 'In Progress';
+              }
+              if (tab === 'upcoming') {
+                return a.status === 'Not Started' && due > now;
+              }
+              if (tab === 'completed') {
+                return a.status === 'Submitted' || a.status === 'Graded';
+              }
+              return true;
+            })
+            .filter(a => this.assignmentMatchesFilters(a))
+            .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        },
+
+        // Priority & grade
+        priorityLabel(a) {
+          const now = new Date();
+          const due = new Date(a.dueDate);
+          if (a.status === 'Submitted' || a.status === 'Graded') return 'On Time';
+          if (due < now) return 'Overdue';
+          const diffHours = (due - now) / 36e5;
+          return diffHours <= 48 ? 'Due Soon' : 'On Time';
+        },
+
+        priorityClasses(label) {
+          if (label === 'Overdue') return 'border-rose-300 bg-rose-50 text-rose-700';
+          if (label === 'Due Soon') return 'border-amber-300 bg-amber-50 text-amber-700';
+          return 'border-emerald-300 bg-emerald-50 text-emerald-700';
+        },
+
+        gradePercent(a) {
+          if (!a || !a.pointsPossible || a.pointsEarned == null) return 0;
+          return Math.round((a.pointsEarned / a.pointsPossible) * 100);
+        },
+
+        formatDateTime(iso) {
+          const d = new Date(iso);
+          if (isNaN(d.getTime())) return '—';
+          return d.toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+          });
+        },
+
+        // Submission modal
+        openSubmissionModal(a) {
+          if (a) {
+            this.submissionAssignment = a;
+            this.submissionCourse = a.course;
+            this.submissionTitle = a.title;
+          } else {
+            this.submissionAssignment = null;
+            this.submissionCourse = this.assignmentCourses[0] || '';
+            this.submissionTitle = '';
+          }
+          this.submissionType = 'file';
+          this.submissionFile = null;
+          this.submissionText = '';
+          this.submissionLink = '';
+          this.submissionNotes = '';
+          this.submissionError = null;
+          this.submissionBusy = false;
+          this.submissionModalOpen = true;
+        },
+
+        openNewSubmission() {
+          this.openSubmissionModal(null);
+        },
+
+        closeSubmissionModal() {
+          this.submissionModalOpen = false;
+          this.submissionAssignment = null;
+          this.submissionError = null;
+        },
+
+        handleFileDrop(e) {
+          if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files[0]) return;
+          this.setSubmissionFile(e.dataTransfer.files[0]);
+        },
+        handleFileInput(e) {
+          if (!e.target || !e.target.files || !e.target.files[0]) return;
+          this.setSubmissionFile(e.target.files[0]);
+        },
+        setSubmissionFile(file) {
+          if (!file) return;
+          const allowed = ['.pdf', '.doc', '.docx', '.zip'];
+          const lower = file.name.toLowerCase();
+          if (!allowed.some(ext => lower.endsWith(ext))) {
+            this.submissionError = 'Invalid file type. Allowed: PDF, DOC, DOCX, ZIP.';
+            return;
+          }
+          if (file.size > 10 * 1024 * 1024) {
+            this.submissionError = 'File exceeds 10MB (max 10MB).';
+            return;
+          }
+          this.submissionFile = file;
+          this.submissionError = null;
+        },
+
+        isValidLink(url) {
+          return /^https?:\/\//i.test((url || '').trim());
+        },
+
+        submitAssignment() {
+          this.submissionError = null;
+
+          if (!this.submissionCourse || !this.submissionTitle) {
+            this.submissionError = 'Course and title are required.';
+            return;
+          }
+
+          if (this.submissionType === 'file' && !this.submissionFile) {
+            this.submissionError = 'Please upload a file.';
+            return;
+          }
+          if (this.submissionType === 'text' && !this.submissionText.trim()) {
+            this.submissionError = 'Text submission is empty.';
+            return;
+          }
+          if (this.submissionType === 'link' && !this.isValidLink(this.submissionLink)) {
+            this.submissionError = 'Invalid link. Must start with http:// or https://';
+            return;
+          }
+
+          this.submissionBusy = true;
+
+          const payload = {
+            type: this.submissionType,
+            fileName: this.submissionFile ? this.submissionFile.name : null,
+            link: this.submissionType === 'link' ? this.submissionLink.trim() : null,
+            text: this.submissionType === 'text' ? this.submissionText.trim() : null,
+            notes: this.submissionNotes.trim() || null,
+            submittedAt: new Date().toISOString()
+          };
+
+          setTimeout(() => {
+            if (this.submissionAssignment) {
+              this.submissionAssignment.status = 'Submitted';
+              this.submissionAssignment.progress = 100;
+              this.submissionAssignment.canSubmit = false;
+              this.submissionAssignment.submission = payload;
+            }
+            this.submissionBusy = false;
+            this.closeSubmissionModal();
+            alert('Assignment submitted!');
+          }, 400);
+        },
+
+        // Feedback modal
+        openFeedbackModal(a) {
+          if (!a) return;
+          this.feedbackAssignment = a;
+          this.feedbackModalOpen = true;
+        },
+        closeFeedbackModal() {
+          this.feedbackModalOpen = false;
+          this.feedbackAssignment = null;
+        },
+
+        // Assignment detail modal
+        openAssignmentDetail(a) {
+          if (!a) return;
+          this.detailAssignment = a;
+          this.detailModalOpen = true;
+        },
+        closeAssignmentDetail() {
+          this.detailModalOpen = false;
+          this.detailAssignment = null;
+        }
+      };
+    }
+  </script>
+</body>
+</html>
